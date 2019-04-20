@@ -9,10 +9,10 @@
 int RAND_SEED[] = {1,20,30,40,50,60,70,80,90,100,110, 120, 130, 140, 150, 160, 170, 180, 190, 200};
 int NUM_OF_RUNS = 5;
 static int POP_SIZE = 100; //global parameters
-int MAX_NUM_OF_GEN = 1000; //max number of generations
+int MAX_NUM_OF_GEN = 100; //max number of generations
 int MAX_TIME = 60;  //max amount of time permited (in sec)
 float CROSSOVER_RATE = 0.8;
-float MUTATION_RATE = 0.1;
+float MUTATION_RATE = 0.2;
 int PROB_NUM = 0;
 
 struct solution_struct best_sln;  //global best solution
@@ -251,6 +251,21 @@ void getChromesome(struct solution_struct* solve){
     for(int i = 0;i<num;i++){
         printf("%d ",solve->x[i]);
     }
+    printf("items size infor:\n");
+    for(int i = 0;i<num;i++){
+        printf("items%d:----\n",i);
+        for(int a = 0;a<solve->prob->dim;a++){
+             printf("%d ",solve->prob->items[i].size[a]);
+        }
+        printf("%d ",solve->prob->items[i].p);
+        printf("\n");
+       
+    }
+    
+    printf("objective infor:");
+    
+        printf("%f ",solve->objective);
+    
     printf("\n");
 }
 
@@ -327,16 +342,21 @@ void feasibility_repair(struct solution_struct* pop)
         if(pop[i].feasibility < 0){
               // printf("%d Before repair: \n ",i);
               // getChromesome(&pop[i]);
+              
             for(int j = 0;j<num;j++){
+                
                 if(pop[i].x[j] == 1){
                     pop[i].x[j] = 0;
+                    
                     evaluate_solution(&pop[i]);
-                    if(pop[i].feasibility >= 0){
-                        //printf("%lf\n",pop[i].objective);
+                    if(pop[i].feasibility > 0){
+                        
+                        // printf("%lf\n",pop[i].objective);
                         break;
-                    } 
+                    }
                 }
             }
+            
              // printf("%d After repair: \n ",i);
              //  getChromesome(&pop[i]);
         }
@@ -458,6 +478,7 @@ void replacement(struct solution_struct* curt_pop, struct solution_struct* new_p
     // printf("After replacement: \n");
     //  for(int x = 0 ;x < POP_SIZE;x++){
     //     printf("%d, curt_pop %lf |-----| new_pop %lf\n",x,curt_pop[x].objective,new_pop[x].objective);
+    //     getChromesome(&curt_pop[x]);
     // }
     
     
@@ -465,7 +486,7 @@ void replacement(struct solution_struct* curt_pop, struct solution_struct* new_p
 
 void output_solution(struct solution_struct* sln, const char* out_file)
 {
-    FILE *fp = fopen(out_file,"w+");
+    FILE *fp = fopen(out_file,"a");
     if(fp == NULL){
         printf("Failed to open the file.");
         return;
@@ -477,7 +498,10 @@ void output_solution(struct solution_struct* sln, const char* out_file)
         fprintf(fp,"\n");
     }
     //fclose(fp);
+
     printf("sln.feas=%d, sln.obj=%f\n", sln->feasibility, sln->objective);
+    struct solution_struct a;
+    best_sln = a;
 }
 
 //update global best solution with best solution from pop if better
@@ -485,15 +509,28 @@ void update_best_solution(struct solution_struct* pop)
 {
     double cur = pop[0].objective;
     int indx = 0;
+   
+     //if(best_sln.x==NULL && best_sln.cap_left==NULL)  best_sln = pop[0];
+    //     if(!copy_solution(&best_sln,&pop[0])){
+    //         printf("copy failed.\n");
+    //     }
+    
+    
     for(int i = 1 ;i < POP_SIZE;i++){
+        //getChromesome(&pop[i]);
         if(cur < pop[i].objective){
             cur = pop[i].objective;
             indx = i;
         }
     }
-    if(best_sln.objective < pop[indx].objective){
+    if(best_sln.x!=NULL && best_sln.cap_left!=NULL){
+        if(best_sln.objective < pop[indx].objective){
+        best_sln = pop[indx];
+        }
+    }else{
         best_sln = pop[indx];
     }
+    
     
 }
 
@@ -520,10 +557,10 @@ int MA(struct problem_struct* prob)
     }
     
     update_best_solution(curt_pop);
+    //getChromesome(&best_sln);
     
-    
-    // free_population(curt_pop, POP_SIZE);
-    // free_population(new_pop, POP_SIZE);
+     // free_population(curt_pop, POP_SIZE);
+     // free_population(new_pop, POP_SIZE);
     
     return 0;
 }
@@ -531,7 +568,20 @@ int MA(struct problem_struct* prob)
 int main(int argc, char const *argv[])
 {
 	
-	FILE *fp = fopen("best_sln.txt","w+");
+
+    // struct problem_struct** my_problems = load_problems(argv[1]);
+    // struct solution_struct curt_pop[POP_SIZE];
+    // struct solution_struct new_pop[POP_SIZE];
+    // init_population(my_problems[0], curt_pop);
+    // init_population(my_problems[0], new_pop);
+    // cross_over(curt_pop, new_pop);
+    // mutation(new_pop);
+    // feasibility_repair(new_pop);
+    // local_search_first_descent(new_pop);
+    // replacement(curt_pop, new_pop);
+    // update_best_solution(curt_pop);
+    // getChromesome(&best_sln);
+	 FILE *fp = fopen("best_sln.txt","w+");
     if(fp == NULL){
         printf("Failed to open the file.");
         return 0;
@@ -542,20 +592,27 @@ int main(int argc, char const *argv[])
      //fclose(fp);
     for(int k=0; k<PROB_NUM; k++)
     {
+       
         printf("----%d\n",k);
         for(int run=0; run<NUM_OF_RUNS; run++)
         {
             printf("%d\n",run);
             srand(RAND_SEED[run]);
             MA(my_problems[k]); //call MA
-            output_solution(&best_sln, "best_sln.txt");
+              //getChromesome(&best_sln);
+            
+
         }
-        free_problem(my_problems[k]); //free problem data memory
+        output_solution(&best_sln, "best_sln.txt");
+        // if(best_sln.x!=NULL && best_sln.cap_left!=NULL){ free(best_sln.cap_left); free(best_sln.x);} //free global
+
+         free_problem(my_problems[k]); //free problem data memory
     }
-    fclose(fp);
-    //printf("%lf\n",best_sln.objective);
-    free(my_problems); //free problems array
-    if(best_sln.x!=NULL && best_sln.cap_left!=NULL){ free(best_sln.cap_left); free(best_sln.x);} //free global
+    
+     fclose(fp);
+    // //printf("%lf\n",best_sln.objective);
+     // free(my_problems); //free problems array
+     // if(best_sln.x!=NULL && best_sln.cap_left!=NULL){ free(best_sln.cap_left); free(best_sln.x);} //free global
 
 	return 0;
 }
