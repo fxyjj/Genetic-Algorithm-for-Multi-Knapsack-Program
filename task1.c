@@ -11,8 +11,8 @@ int NUM_OF_RUNS = 5;
 static int POP_SIZE = 100; //global parameters
 int MAX_NUM_OF_GEN = 100; //max number of generations
 int MAX_TIME = 60;  //max amount of time permited (in sec)
-float CROSSOVER_RATE = 0.8;
-float MUTATION_RATE = 0.2;
+float CROSSOVER_RATE = 0.7;//0.8
+float MUTATION_RATE = 0.1;//0.2
 int PROB_NUM = 0;
 
 struct solution_struct best_sln;  //global best solution
@@ -99,8 +99,8 @@ bool copy_solution(struct solution_struct* dest_sln, struct solution_struct* sou
         dest_sln = malloc(sizeof(struct solution_struct));
     }
     else{
-        free(dest_sln->cap_left);
-        free(dest_sln->x);
+           //free(dest_sln->cap_left);
+           //free(dest_sln->x);
     }
     int n = source_sln->prob->n;
     int m =source_sln->prob->dim;
@@ -262,7 +262,7 @@ void getChromesome(struct solution_struct* solve){
        
     }
     
-    printf("objective infor:");
+    printf("\nobjective infor:");
     
         printf("%f ",solve->objective);
     
@@ -334,29 +334,59 @@ void mutation(struct solution_struct* pop)
     }
 }
 
+
+
 //modify the solutions that violate the capacity constraints //TODO remove the items with smallest price
 void feasibility_repair(struct solution_struct* pop)
 {
     int num = pop[0].prob->n;
     for(int i = 0;i<POP_SIZE;i++){
+
+        int retail[num];
+        int index[num];
+        int count = 0;
         if(pop[i].feasibility < 0){
+            //printf("|||||||%d||||||\n",i);
               // printf("%d Before repair: \n ",i);
               // getChromesome(&pop[i]);
               
             for(int j = 0;j<num;j++){
                 
                 if(pop[i].x[j] == 1){
-                    pop[i].x[j] = 0;
+                    retail[count] = pop[i].prob->items[j].p;
+                    index[count++] = j;
+                    // pop[i].x[j] = 0;
                     
+                    // evaluate_solution(&pop[i]);
+                    // if(pop[i].feasibility > 0){
+                        
+                    //     // printf("%lf\n",pop[i].objective);
+                    //     break;
+                    // }
+                }
+            }
+            int indic = 0;
+                while(indic == 0){
+                    indic = 1;
+                    for(int lo = 0;lo<count-1;lo++){
+                        if(retail[lo] > retail[lo+1]){
+                            int mid = retail[lo];
+                            retail[lo] = retail[lo+1];
+                            retail[lo+1] = mid;
+                            int mid1 = index[lo];
+                            index[lo] = index[lo+1];
+                            index[lo+1] = mid1;
+                            indic = 0;
+                        }                    
+                    }
+                }
+                for(int lo1 = 0;lo1<count;lo1++){
+                    pop[i].x[index[lo1]] = 0;
                     evaluate_solution(&pop[i]);
                     if(pop[i].feasibility > 0){
-                        
-                        // printf("%lf\n",pop[i].objective);
                         break;
                     }
                 }
-            }
-            
              // printf("%d After repair: \n ",i);
              //  getChromesome(&pop[i]);
         }
@@ -445,19 +475,29 @@ void replacement(struct solution_struct* curt_pop, struct solution_struct* new_p
     // for(int x = 0 ;x < POP_SIZE;x++){
     //     printf("%d, -%lf-\n",x,new_pop[x].objective);
     // }
+    //printf("***\n");
     for(int i = 0;i<2*POP_SIZE-1;i+=2){
-        big[i] = curt_pop[a++];
-        big[i+1] = new_pop[b++];
+        //printf("%d %d %d@@@\n",i,a,b);
+        copy_solution(&big[i],&curt_pop[a++]);
+        copy_solution(&big[i+1],&new_pop[b++]);
+        // big[i] = curt_pop[a++];
+        // big[i+1] = new_pop[b++];
     } 
+    //printf("###\n");
     int check = 0;
     while(check == 0){
         check = 1;
         for(int i = 0;i<2*POP_SIZE-1;i++){
             if(big[i].objective < big[i+1].objective){
                 //printf("before: %lf,%lf\n",big[i].objective,big[i+1].objective);
-                struct solution_struct t = big[i];
-                big[i] = big[i+1]; 
-                big[i+1] = t;
+                struct solution_struct t;// = big[i];
+                copy_solution(&t,&big[i]);
+                copy_solution(&big[i],&big[i+1]);
+                copy_solution(&big[i+1],&t);
+                free(t.x);
+                free(t.cap_left);
+                // big[i] = big[i+1]; 
+                // big[i+1] = t;
                 check = 0;
                 //printf("after: %lf,%lf\n",curt_pop[i].objective,curt_pop[i+1].objective);
             }
@@ -472,9 +512,12 @@ void replacement(struct solution_struct* curt_pop, struct solution_struct* new_p
     
     
     for(int j = 0 ;j < POP_SIZE;j++){
-            curt_pop[j] = big[j];
-            new_pop[j] = big[j];
+        copy_solution(&curt_pop[j],&big[j]);
+        copy_solution(&new_pop[j],&big[j]);
+            // curt_pop[j] = big[j];
+            // new_pop[j] = big[j];
     }
+    free_population(big,2*POP_SIZE);
     // printf("After replacement: \n");
     //  for(int x = 0 ;x < POP_SIZE;x++){
     //     printf("%d, curt_pop %lf |-----| new_pop %lf\n",x,curt_pop[x].objective,new_pop[x].objective);
@@ -486,7 +529,7 @@ void replacement(struct solution_struct* curt_pop, struct solution_struct* new_p
 
 void output_solution(struct solution_struct* sln, const char* out_file)
 {
-    FILE *fp = fopen(out_file,"a");
+    FILE *fp = fopen(out_file,"a+");
     if(fp == NULL){
         printf("Failed to open the file.");
         return;
@@ -500,8 +543,11 @@ void output_solution(struct solution_struct* sln, const char* out_file)
     //fclose(fp);
 
     printf("sln.feas=%d, sln.obj=%f\n", sln->feasibility, sln->objective);
-    struct solution_struct a;
-    best_sln = a;
+    // struct solution_struct a;
+    // best_sln = a;
+    free(best_sln.cap_left); 
+    free(best_sln.x);
+    best_sln.objective = 0;
 }
 
 //update global best solution with best solution from pop if better
@@ -525,10 +571,18 @@ void update_best_solution(struct solution_struct* pop)
     }
     if(best_sln.x!=NULL && best_sln.cap_left!=NULL){
         if(best_sln.objective < pop[indx].objective){
-        best_sln = pop[indx];
+            
+            //printf("iiii,%d\n",copy_solution(&best_sln,&pop[indx]));
+            copy_solution(&best_sln,&pop[indx]);
+            //getChromesome(&best_sln);
+        //best_sln = pop[indx];
         }
     }else{
-        best_sln = pop[indx];
+        //printf("oooo,%d\n",copy_solution(&best_sln,&pop[indx]));
+        copy_solution(&best_sln,&pop[indx]);
+        
+        //getChromesome(&best_sln);
+        //best_sln = pop[indx];
     }
     
     
@@ -559,8 +613,8 @@ int MA(struct problem_struct* prob)
     update_best_solution(curt_pop);
     //getChromesome(&best_sln);
     
-     // free_population(curt_pop, POP_SIZE);
-     // free_population(new_pop, POP_SIZE);
+      free_population(curt_pop, POP_SIZE);
+      free_population(new_pop, POP_SIZE);
     
     return 0;
 }
@@ -572,16 +626,18 @@ int main(int argc, char const *argv[])
     // struct problem_struct** my_problems = load_problems(argv[1]);
     // struct solution_struct curt_pop[POP_SIZE];
     // struct solution_struct new_pop[POP_SIZE];
-    // init_population(my_problems[0], curt_pop);
-    // init_population(my_problems[0], new_pop);
+    // init_population(my_problems[2], curt_pop);
+    // init_population(my_problems[2], new_pop);
     // cross_over(curt_pop, new_pop);
     // mutation(new_pop);
     // feasibility_repair(new_pop);
     // local_search_first_descent(new_pop);
+    // printf("1\n");
     // replacement(curt_pop, new_pop);
+    // printf("2\n");
     // update_best_solution(curt_pop);
-    // getChromesome(&best_sln);
-	 FILE *fp = fopen("best_sln.txt","w+");
+    //  getChromesome(&best_sln);
+	 FILE *fp = fopen("best_sln.txt","w");
     if(fp == NULL){
         printf("Failed to open the file.");
         return 0;
@@ -596,14 +652,15 @@ int main(int argc, char const *argv[])
         printf("----%d\n",k);
         for(int run=0; run<NUM_OF_RUNS; run++)
         {
-            printf("%d\n",run);
-            srand(RAND_SEED[run]);
+            printf("===%d\n",run);
+            //srand(RAND_SEED[run]);
+            srand((int)time(0));
             MA(my_problems[k]); //call MA
               //getChromesome(&best_sln);
-            
 
         }
-        output_solution(&best_sln, "best_sln.txt");
+        
+            output_solution(&best_sln, "best_sln.txt");
         // if(best_sln.x!=NULL && best_sln.cap_left!=NULL){ free(best_sln.cap_left); free(best_sln.x);} //free global
 
          free_problem(my_problems[k]); //free problem data memory
@@ -611,8 +668,8 @@ int main(int argc, char const *argv[])
     
      fclose(fp);
     // //printf("%lf\n",best_sln.objective);
-     // free(my_problems); //free problems array
-     // if(best_sln.x!=NULL && best_sln.cap_left!=NULL){ free(best_sln.cap_left); free(best_sln.x);} //free global
+     free(my_problems); //free problems array
+     //if(best_sln.x!=NULL && best_sln.cap_left!=NULL){ free(best_sln.cap_left); free(best_sln.x);} //free global
 
 	return 0;
 }
