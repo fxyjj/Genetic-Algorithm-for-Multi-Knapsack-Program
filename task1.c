@@ -7,12 +7,12 @@
 
 
 int RAND_SEED[] = {1,20,30,40,50,60,70,80,90,100,110, 120, 130, 140, 150, 160, 170, 180, 190, 200};
-int NUM_OF_RUNS = 10;
+int NUM_OF_RUNS = 5;
 static int POP_SIZE = 100; //global parameters
-int MAX_NUM_OF_GEN = 1000;//100; //max number of generations
+int MAX_NUM_OF_GEN = 1200;//100; //max number of generations
 int MAX_TIME = 60;  //max amount of time permited (in sec)
 float CROSSOVER_RATE = 0.9;//0.8
-float MUTATION_RATE = 0.9;//0.2
+float MUTATION_RATE = 0.3;//0.2
 int PROB_NUM = 0;
 
 struct solution_struct best_sln;  //global best solution
@@ -253,16 +253,16 @@ void getChromesome(struct solution_struct* solve){
     for(int i = 0;i<num;i++){
         printf("%d ",solve->x[i]);
     }
-    printf("items size infor:\n");
-    for(int i = 0;i<num;i++){
-        printf("items%d:----\n",i);
-        for(int a = 0;a<solve->prob->dim;a++){
-             printf("%d ",solve->prob->items[i].size[a]);
-        }
-        printf("%d ",solve->prob->items[i].p);
-        printf("\n");
+    // printf("items size infor:\n");
+    // for(int i = 0;i<num;i++){
+    //     printf("items%d:----\n",i);
+    //     for(int a = 0;a<solve->prob->dim;a++){
+    //          printf("%d ",solve->prob->items[i].size[a]);
+    //     }
+    //     printf("%d ",solve->prob->items[i].p);
+    //     printf("\n");
        
-    }
+    // }
     
     printf("\nobjective infor:");
     
@@ -304,19 +304,40 @@ void cross_over(struct solution_struct* curt_pop, struct solution_struct* new_po
     // }else{
     //     domain = POP_SIZE-1;
     // }
-    int j,j1;
-    while(true){
-        j = rand_int(0,POP_SIZE-2);
-        j1 = rand_int(0,POP_SIZE-2);
-        if(j != j1){
+     int j = -1,j1 = -1;
+    // while(true){
+    //     j = rand_int(0,POP_SIZE-2);
+    //     j1 = rand_int(0,POP_SIZE-2);
+    //     if(j != j1){
+    //         break;
+    //     }
+    // }
+    long int div = 0;
+    for(int q = 0;q < POP_SIZE;q++){
+        div += new_pop[q].objective;
+    }
+    int pob = rand_01()*div;
+    int count = 0;
+    for(int q1 = 0;q1 < POP_SIZE;q1++){
+        count += new_pop[q1].objective;
+        if(count>=pob){
+            j = q1;
             break;
         }
     }
-    
+    int pob1 = rand_01()*div;
+    int count1 = 0;
+    for(int q1 = 0;q1 < POP_SIZE;q1++){
+        count1 += new_pop[q1].objective;
+        if(count1>=pob1){
+            j1 = q1;
+            break;
+        }
+    }
   	//for(int j = 0; j<domain-1;j+=2){
-         // printf("%d %d Before cross over:\n ",j,j+1);
+         // printf("%d %d Before cross over:\n ",j,j1);
          // getChromesome(&new_pop[j]);
-         // getChromesome(&new_pop[j+1]);
+         // getChromesome(&new_pop[j1]);
 
   		if(rand_01() < CROSSOVER_RATE){
   			int xpt = rand_int(1,curt_pop[0].prob->n-2);
@@ -329,9 +350,9 @@ void cross_over(struct solution_struct* curt_pop, struct solution_struct* new_po
   			evaluate_solution(&new_pop[j]);
             evaluate_solution(&new_pop[j1]);
   		}
-        // printf("%d %d After cross over:\n ",j,j+1);
+        // printf("%d %d After cross over:\n ",j,j1);
         //  getChromesome(&new_pop[j]);
-        //  getChromesome(&new_pop[j+1]);
+        //  getChromesome(&new_pop[j1]);
         //  printf("---------------------------\n");
   	//}	
 }
@@ -343,7 +364,7 @@ void mutation(struct solution_struct* pop)
         // printf("%d  Before mutation:\n ",i);
         //  getChromesome(&pop[i]);
         int count = 0;
-    	//for(int j = 0;j<pop[i].prob->n;j++){
+    	//for(int inh = 0;inh<pop[i].prob->n;inh++){
         // int inh,inh1;
         // while(true){
         //     inh = rand_int(0,pop[i].prob->n-1);
@@ -359,7 +380,7 @@ void mutation(struct solution_struct* pop)
     			if(pop[i].x[inh] == 0){
     				pop[i].x[inh] = 1;
     			 }else{
-    			 	//pop[i].x[inh] = 0;
+    			 	pop[i].x[inh] = 0;
     			 }
                  
                 // if(count == (int)POP_SIZE * MUTATION_RATE){
@@ -390,43 +411,80 @@ void feasibility_repair(struct solution_struct* pop)
               // printf("%d Before repair: \n ",i);
               // getChromesome(&pop[i]);
               
-            for(int j = 0;j<num;j++){
+            // for(int j = 0;j<num;j++){
                 
-                if(pop[i].x[j] == 1){
-                    retail[count] = pop[i].prob->items[j].p;
-                    index[count++] = j;
-                    // pop[i].x[j] = 0;
+            //     if(pop[i].x[j] == 1){
+            //         retail[count] = pop[i].prob->items[j].p;
+            //         index[count++] = j;
+            //         // pop[i].x[j] = 0;
                     
-                    // evaluate_solution(&pop[i]);
-                    // if(pop[i].feasibility > 0){
+            //         // evaluate_solution(&pop[i]);
+            //         // if(pop[i].feasibility > 0){
                         
-                    //     // printf("%lf\n",pop[i].objective);
-                    //     break;
-                    // }
-                }
-            }
-            int indic = 0;
-                while(indic == 0){
-                    indic = 1;
-                    for(int lo = 0;lo<count-1;lo++){
-                        if(retail[lo] > retail[lo+1]){
-                            int mid = retail[lo];
-                            retail[lo] = retail[lo+1];
-                            retail[lo+1] = mid;
-                            int mid1 = index[lo];
-                            index[lo] = index[lo+1];
-                            index[lo+1] = mid1;
-                            indic = 0;
-                        }                    
-                    }
-                }
-                for(int lo1 = 0;lo1<count;lo1++){
-                    pop[i].x[index[lo1]] = 0;
-                    evaluate_solution(&pop[i]);
-                    if(pop[i].feasibility > 0){
+            //         //     // printf("%lf\n",pop[i].objective);
+            //         //     break;
+            //         // }
+            //     }
+            // }
+            // int indic = 0;
+            //     while(indic == 0){
+            //         indic = 1;
+            //         for(int lo = 0;lo<count-1;lo++){
+            //             if(retail[lo] > retail[lo+1]){
+            //                 int mid = retail[lo];
+            //                 retail[lo] = retail[lo+1];
+            //                 retail[lo+1] = mid;
+            //                 int mid1 = index[lo];
+            //                 index[lo] = index[lo+1];
+            //                 index[lo+1] = mid1;
+            //                 indic = 0;
+            //             }                    
+            //         }
+            //     }
+            //     for(int lo1 = 0;lo1<count;lo1++){
+            //         pop[i].x[index[lo1]] = 0;
+            //         evaluate_solution(&pop[i]);
+            //         if(pop[i].feasibility > 0){
+            //             break;
+            //         }
+            //     }
+          while(true){
+                int indx = 0;
+                for(int j1 = 0;j1<pop[i].prob->dim;j1++){
+                    if(pop[i].cap_left[j1]<0){
+                        indx = j1;
                         break;
                     }
                 }
+                //printf("%d\n",indx);
+                
+                //printf("@@@%d %d %lf\n",pop[i].prob->items[0].p,pop[i].prob->items[0].size[indx],a);
+                double pw = 0;
+                //printf("###%lf\n",pw);
+                int new_indx =  0;
+                for(int j2 = 0;j2 < num-1;j2++){
+                    if(pop[i].x[j2] == 1){
+                        pw = (double)pop[i].prob->items[j2].p/(double)pop[i].prob->items[j2].size[indx];
+                        new_indx = j2;
+                   //printf("!!!%lf\n",(double)pop[i].prob->items[j2].p/(double)pop[i].prob->items[j2].size[indx]);
+                    if(pw > (double)pop[i].prob->items[j2+1].p/(double)pop[i].prob->items[j2+1].size[indx]){
+                        pw = (double)pop[i].prob->items[j2+1].p/(double)pop[i].prob->items[j2+1].size[indx];
+                        new_indx = j2;
+                          //printf("%d---\n",new_indx);
+                    }
+                }
+                    //printf("%d+++\n",new_indx);
+                }
+                //printf("****%d\n",new_indx);
+            pop[i].x[new_indx] = 0;
+            evaluate_solution(&pop[i]);
+            if(pop[i].feasibility > 0){
+                break;
+            }
+            
+        }
+        //if()
+
              // printf("%d After repair: \n ",i);
              //  getChromesome(&pop[i]);
         }
@@ -476,7 +534,7 @@ void local_search_first_descent(struct solution_struct* pop)
                         } 
                     }
                     if(check == 1){
-                        if(rand_int(0,9) < 2) indx1 = -1;
+                        if(rand_int(0,9) < 3) indx1 = -1;
                         j = indx0;
                         indx0 = -1;
                     }
@@ -735,6 +793,7 @@ int MA(struct problem_struct* prob)
         mutation(new_pop);
         feasibility_repair(new_pop);
         local_search_first_descent(new_pop);
+
         //feasibility_repair(new_pop);
         replacement(curt_pop, new_pop);
         gen++;
